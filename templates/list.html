@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>List of Excel Data</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        .fullscreen-button {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            z-index: 50;
+        }
+        .fullscreen {
+            background-color: #f87171; /* Red for fullscreen button */
+        }
+        .table-container {
+            width: 100%;
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 0.5rem;
+            text-align: center;
+        }
+        th {
+            background-color: #4a5568; /* Darker gray */
+            color: white;
+            font-weight: bold;
+        }
+        .red-bg {
+            background-color: #f87171; /* Red */
+            color: white;
+        }
+        .blue-bg {
+            background-color: #60a5fa; /* Blue */
+            color: white;
+        }
+        .green-bg {
+            background-color: #34d399; /* Green */
+            color: white;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans leading-normal tracking-normal">
+    <div class="container mx-auto p-6">
+        <!-- Fullscreen Button -->
+        <button id="fullscreen-btn" class="fullscreen-button p-2 text-white rounded-lg shadow-md fullscreen" onclick="toggleFullscreen()">
+            <span id="fullscreen-icon" class="material-icons">fullscreen</span>
+        </button>
+
+        <h1 class="text-4xl font-bold text-center mb-10">List of Excel Data</h1>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>SL/NO</th>
+                        <th>Date</th>
+                        <th>Job No</th>
+                        <th>Department/Name</th>
+                        <th>Nature of Job</th>
+                        <th>Contact No</th>
+                        <th>Person</th>
+                        <th>Remarks</th>
+                    </tr>
+                </thead>
+                <tbody id="data-list">
+                    <!-- Data rows will be inserted here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let refreshInterval = 5000; // Default to 5 seconds
+        let intervalId;
+
+        function fetchData() {
+            fetch('/list')
+                .then(response => response.json())
+                .then(data => {
+                    const dataList = document.getElementById('data-list');
+                    dataList.innerHTML = ''; // Clear existing content
+
+                    data.forEach(row => {
+                        const tr = document.createElement('tr');
+                        tr.className = getColorClass(row[row.length - 1]);
+
+                        const content = `
+                            <td>${row[0] || ''}</td>
+                            <td>${row[1] || ''}</td>
+                            <td>${row[2] || ''}</td>
+                            <td>${row[3] || ''}</td>
+                            <td>${row[4] || ''}</td>
+                            <td>${row[5] || ''}</td>
+                            <td>${row[7] || ''}</td>
+                            <td>${row[8] || ''}</td>
+                        `;
+
+                        tr.innerHTML = content;
+                        dataList.appendChild(tr);
+                    });
+                })
+                .catch(error => console.error('Error fetching data:', error));
+        }
+
+        function getColorClass(color) {
+            switch(color) {
+                case 'Red':
+                    return 'red-bg';
+                case 'Blue':
+                    return 'blue-bg';
+                case 'Green':
+                    return 'green-bg';
+                default:
+                    return '';
+            }
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+                document.getElementById('fullscreen-icon').textContent = 'EXIT';
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                    document.getElementById('fullscreen-icon').textContent = 'fullscreen';
+                }
+            }
+        }
+
+        // Initial call to start fetching data
+        fetchData();
+        intervalId = setInterval(fetchData, refreshInterval);
+    </script>
+</body>
+</html>

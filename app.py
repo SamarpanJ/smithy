@@ -82,5 +82,44 @@ def data():
 
     return jsonify(rotated_color_info)
 
+@app.route('/list')
+def list_entries():
+    # Load Excel data and colors
+    color_info = read_excel_with_colors('data/samarpan.xlsx')
+
+    # Combine all non-black entries while maintaining the original order
+    combined_list = []
+
+    # Iterate over each category and append entries with color information
+    for category in ['Red', 'Blue', 'Green']:
+        for entry in color_info[category]:
+            entry_with_color = entry + [category]  # Add color as an additional field
+            combined_list.append(entry_with_color)
+
+    # Sort the combined list by the "number" column (assumed to be the first column)
+    combined_list.sort(key=lambda x: x[0])  # Adjust the index if needed
+
+    # Get refresh interval and number of entries per set from query parameters
+    refresh_interval = int(request.args.get('interval', 10))  # Default to 10 seconds
+    entries_per_set = 10  # Fixed number of entries to return
+
+    # Calculate offset based on the current time and refresh interval
+    current_time = int(time.time())
+    offset = (current_time // refresh_interval) % len(combined_list)
+
+    # Rotate the list and select the current set of entries
+    rotated_list = combined_list[offset:offset + entries_per_set]
+
+    # If the slice is smaller than the required set, wrap around the list
+    if len(rotated_list) < entries_per_set:
+        rotated_list += combined_list[:entries_per_set - len(rotated_list)]
+
+    return jsonify(rotated_list)
+
+
+@app.route('/listdata')
+def sending_listdata():
+    return render_template("list.html")
+
 if __name__ == '__main__':
     app.run(debug=True)
