@@ -106,11 +106,11 @@
             <div class="mb-4 flex items-end gap-4">
                 <div class="flex flex-col">
                     <label for="from-date" class="text-lg font-medium mb-1">From Date:</label>
-                    <input type="text" id="from-date" class="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="dd-mm-yyyy" />
+                    <input type="date" id="from-date" class="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
                 <div class="flex flex-col">
                     <label for="to-date" class="text-lg font-medium mb-1">To Date:</label>
-                    <input type="text" id="to-date" class="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="dd-mm-yyyy" />
+                    <input type="date" id="to-date" class="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
                 <div class="flex flex-col">
                     <label for="refresh-rate" class="text-lg font-medium mb-1">Refresh Rate:</label>
@@ -121,7 +121,10 @@
                         <option value="30000">30 seconds</option>
                     </select>
                 </div>
-                <button class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500" onclick="applyFilter()">Apply Filter</button>
+                <div class="button-row">
+                    <button class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500" onclick="applyFilter()">Apply Filter</button>
+                    <button class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500" onclick="resetFilters()">Reset Filters</button>
+                </div>
             </div>
         </div>
 
@@ -181,7 +184,7 @@
 
         function formatDate(dateStr) {
             if (!dateStr) return '';
-            const [day, month, year] = dateStr.split('-');
+            const [year, month, day] = dateStr.split('-');
             return `${day}-${month}-${year}`;
         }
 
@@ -218,7 +221,7 @@
             const toDate = document.getElementById('to-date').value;
             const refreshRate = document.getElementById('refresh-rate').value;
 
-            currentFilter = `fromdate=${fromDate}&todate=${toDate}`;
+            currentFilter = `fromdate=${formatForQuery(fromDate)}&todate=${formatForQuery(toDate)}`;
             fetchData();
 
             clearInterval(intervalId);
@@ -226,6 +229,25 @@
             intervalId = setInterval(fetchData, refreshInterval);
 
             alert('Filtered');
+        }
+
+        function formatForQuery(dateStr) {
+            if (!dateStr) return '';
+            const [year, month, day] = dateStr.split('-');
+            return `${day}-${month}-${year}`;
+        }
+
+        function resetFilters() {
+            document.getElementById('from-date').value = '';
+            document.getElementById('to-date').value = '';
+            currentFilter = '';
+            fetchData();
+
+            clearInterval(intervalId);
+            refreshInterval = 5000;
+            intervalId = setInterval(fetchData, refreshInterval);
+
+            alert('Filters reset');
         }
 
         fetchData();
