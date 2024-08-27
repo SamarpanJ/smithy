@@ -6,6 +6,8 @@ from openpyxl import load_workbook
 from datetime import datetime
 import time
 from threading import Thread
+import socket
+import webbrowser
 
 # Flask app setup
 app = Flask(__name__)
@@ -34,7 +36,7 @@ def get_cell_color(cell):
 def read_excel_with_colors(file_path):
     """Read Excel file and categorize cell colors."""
     if not file_path:
-        return { 'Red': [], 'Blue': [], 'Green': [], 'Normal': [] }
+        return {'Red': [], 'Blue': [], 'Green': [], 'Normal': []}
     
     wb = load_workbook(filename=file_path, data_only=True)
     sheet = wb.active
@@ -144,7 +146,7 @@ def list_entries():
     combined_list.sort(key=lambda x: parse_date(x[1]))
 
     refresh_interval = int(request.args.get('interval', 5))  # Default to 5 seconds
-    entries_per_set = int(request.args.get('entries', 10))  # Default to 10 entries
+    entries_per_set = int(request.args.get('entries', 13))  # Default to 10 entries
 
     list_length = len(combined_list)
 
@@ -169,8 +171,21 @@ def list2data():
 def list1data():
     return render_template('list1.html')
 
+@app.route('/stop_server', methods=['POST'])
+def stop_server():
+    print("Sutting down the server...")
+    os._exit(0)  
+
+def is_port_in_use(port):
+    """Check if the port is already in use."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        return s.connect_ex(('localhost', port)) == 0
+
 def start_flask_server():
-    app.run(port=5000)
+    if not is_port_in_use(5000):
+        app.run(port=5000)
+    else:
+        print("Flask server is already running on port 5000. Aborting...")
 
 def select_file():
     global directory
@@ -180,8 +195,9 @@ def select_file():
         directory = os.path.dirname(file_path)
         result_label.config(text=f"Selected File Directory: {directory}")
         root.destroy()
+        # Open the Flask app in the default web browser
+        webbrowser.open("http://localhost:5000")
 
-# Tkinter setup
 root = tk.Tk()
 root.title("File Directory Finder")
 root.geometry("400x200")
