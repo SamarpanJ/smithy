@@ -1,12 +1,11 @@
+import os
 from flask import Flask, jsonify, render_template, request
 from openpyxl import load_workbook
-from datetime import datetime, timedelta
+from datetime import datetime
 import time
-import os
 
 app = Flask(__name__)
 
-# Updated color codes
 COLOR_CODES = {
     'Red': 'FFFF0000',
     'Blue': 'FF00B0F0',
@@ -14,10 +13,25 @@ COLOR_CODES = {
     'Normal': None
 }
 
+def get_directory():
+    """Prompt for directory path, defaulting to desktop."""
+    directory = os.environ.get('MYEXCEL_DIRECTORY')
+    
+    if not directory:
+        desktop_path = os.path.join(os.path.join(os.environ['USERPROFILE']), 'Desktop')
+        directory = input(f"Enter the directory path where 'myexcel.xlsx' is located (default: {desktop_path}): ").strip()
+        if not directory:
+            directory = desktop_path
+        
+        os.environ['MYEXCEL_DIRECTORY'] = directory
 
-@app.route('/')
-def index():
-    return render_template('index.html')
+    return directory
+
+def get_file_path(directory):
+    """Get the full path to 'myexcel.xlsx' in the specified directory."""
+    return os.path.join(directory, 'myexcel.xlsx')
+
+directory = get_directory()
 
 def get_cell_color(cell):
     """Extract color information from a cell."""
@@ -63,25 +77,28 @@ def rotate_entries(entries, n=2, offset=0):
     length = len(entries)
     return [entries[(i + offset) % length] for i in range(n)]
 
+def parse_date(date_str):
+    if isinstance(date_str, str):
+        return datetime.strptime(date_str, '%d-%m-%Y').date()
+    else:
+        raise ValueError(f"Unsupported date type: {type(date_str)}")
 
-
-@app.route('/list1')
-def list_onedata():
-    return render_template('list2.html')
+@app.route('/')
+def index():
+    return render_template('index.html')
 
 @app.route('/data')
 def data():
-    # Load Excel data and colors
-    color_info = read_excel_with_colors('smithy.xlsx')
+    file_path = get_file_path(directory)
     
-    # Get refresh interval from query parameter
-    refresh_interval = int(request.args.get('interval', 10))  # Default to 10 seconds if not provided
+    if not os.path.exists(file_path):
+        return jsonify({'error': 'File not found'}), 404
+    
+    color_info = read_excel_with_colors(file_path)
 
-    # Get the current time in seconds and use it to create an offset for rotation
     current_time = int(time.time())
-    offset = (current_time // refresh_interval) % max(len(color_info['Red']), len(color_info['Blue']), len(color_info['Green']), 1)
+    offset = (current_time // 10) % max(len(color_info['Red']), len(color_info['Blue']), len(color_info['Green']), 1)
 
-    # Rotate entries
     rotated_color_info = {
         'Red': rotate_entries(color_info['Red'], offset=offset),
         'Blue': rotate_entries(color_info['Blue'], offset=offset),
@@ -89,86 +106,45 @@ def data():
     }
 
     return jsonify(rotated_color_info)
-def parse_date(date_str):
-    if isinstance(date_str, str):
-        print(date_str)
-        try:
-            return datetime.strptime(date_str, '%d-%m-%Y').date()
-        except ValueError:
-            raise ValueError(f"Unsupported date format: {date_str}")
-    else:
-        raise ValueError(f"Unsupported date type: {type(date_str)}")
 
 @app.route('/list')
 def list_entries():
-    # Load Excel data and colors
-    color_info = read_excel_with_colors('smithy.xlsx')
+    file_path = get_file_path(directory)
+    
+    if not os.path.exists(file_path):
+        return jsonify({'error': 'File not found'}), 404
 
-    # Combine all entries across different categories
+    color_info = read_excel_with_colors(file_path)
+
     combined_list = []
     for category in ['Red', 'Blue', 'Green']:
         for entry in color_info[category]:
-            entry_with_color = entry + [category]  # Add color as an additional field
+            entry_with_color = entry + [category]
             combined_list.append(entry_with_color)
 
-    # Get date filters from query parameters
-    fromdate_str = request.args.get('fromdate')
-    todate_str = request.args.get('todate')
-
-    fromdate = parse_date(fromdate_str) if fromdate_str else None
-    todate = parse_date(todate_str) if todate_str else None
-
-    # Apply date filters only if they are provided
-    if fromdate or todate:
-        filtered_list = []
-        for entry in combined_list:
-            entry_date = parse_date(entry[1])  # Assuming the date is in the second column
-            if entry_date:
-                if fromdate and todate:
-                    if fromdate <= entry_date <= todate:
-                        filtered_list.append(entry)
-                elif fromdate:
-                    if fromdate <= entry_date:
-                        filtered_list.append(entry)
-                elif todate:
-                    if entry_date <= todate:
-                        filtered_list.append(entry)
-        combined_list = filtered_list
-
-    # Sort the combined list by the date column
     combined_list.sort(key=lambda x: parse_date(x[1]))
 
-    # Get refresh interval and entries per set from query parameters
-    refresh_interval = int(request.args.get('interval', 5))  # Default to 5 seconds
-    entries_per_set = int(request.args.get('entries', 10))  # Default to 10 entries
-
-    # Determine the length of the combined list
     list_length = len(combined_list)
-
     if list_length > 10:
-        # Calculate offset based on the current time and refresh interval
         current_time = int(time.time())
-        offset = (current_time // refresh_interval) % max(list_length, 1)
+        offset = (current_time // 5) % list_length
 
-        # Rotate the list and select the current set of entries
-        rotated_list = combined_list[offset:offset + entries_per_set]
+        rotated_list = combined_list[offset:offset + 13]
 
-        # If the slice is smaller than the required set, wrap around the list
-        if len(rotated_list) < entries_per_set:
-            rotated_list += combined_list[:entries_per_set - len(rotated_list)]
+        if len(rotated_list) < 13:
+            rotated_list += combined_list[:13 - len(rotated_list)]
 
         return jsonify(rotated_list)
     else:
-        # If there are 10 or fewer entries, just return them as is
         return jsonify(combined_list)
 
+@app.route('/list2')
+def list2data():
+    return render_template("list2.html")
 
-
-
-
-@app.route('/listdata')
-def sending_listdata():
-    return render_template("list1.html")
+@app.route('/list1')
+def list1data():
+    return render_template('list1.html')
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run()
