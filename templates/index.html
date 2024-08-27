@@ -1,194 +1,47 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Excel Data</title>
+    <title>Select Excel File</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <style>
-        .fullscreen-button {
-            position: fixed;
-            top: 1rem;
-            right: 1rem;
-            z-index: 50;
-        }
-        .fullscreen {
-            background-color: #f87171; /* Red for fullscreen button */
-        }
-        /* Ensure table text fits within the allocated space */
-        table {
-            width: 100%;
-            table-layout: fixed;
-        }
-        th, td {
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-        .expand-col {
-            width: 20%; /* Adjust width for Department / Name and Nature of Job */
-        }
-        .contact-col {
-            width: 15%; /* Adjust width for Contact No. */
-        }
-        .status-col {
-            width: 15%; /* Adjust width for Work Status */
-        }
-        
-    </style>
 </head>
+
 <body class="bg-gray-100 font-sans leading-normal tracking-normal">
-    <div class="container mx-auto p-6">
-        <!-- Fullscreen Button -->
-        <button id="fullscreen-btn" class="fullscreen-button p-2 text-white rounded-lg shadow-md fullscreen" onclick="toggleFullscreen()">
-            <span id="fullscreen-icon" class="material-icons">fullscreen</span>
-        </button>
-    
-        <h1 class="text-4xl font-bold text-center mb-10">Excel Data</h1>
-    
-        <!-- Refresh Interval Input -->
-        <div id="interval-container" class="mb-4">
-            <label for="refresh-interval" class="block text-lg font-semibold mb-2">Refresh Interval (seconds):</label>
-            <input id="refresh-interval" type="number" min="1" value="5" class="p-2 border border-gray-300 rounded" />
-            <button id="set-interval" class="ml-4 p-2 bg-blue-500 text-white rounded">Set Interval</button>
-        </div>
-    
-        <!-- Data Sections -->
-        <!-- Red Category -->
-        <div id="red-section" class="bg-white p-6 rounded-lg shadow-md mb-8 border-l-6 border-red-600" style="width: 100%;">
-            <h2 class="text-2xl font-bold text-red-600 mb-6">Red</h2>
-            <table class="min-w-full bg-white border border-gray-300 rounded-lg">
-                <thead>
-                    <tr class="w-full bg-gray-200 text-gray-700 uppercase text-sm leading-normal">
-                        <th class="py-4 px-6 text-left">SL/NO.</th>
-                        <th class="py-4 px-6 text-left" style="width: 10%;">DATE</th>
-                        <th class="py-4 px-6 text-left" style="width: 12%;">Job No</th>
-                        <th class="py-4 px-6 text-left expand-col" style="width: 20%;">Department / Name</th>
-                        <th class="py-4 px-6 text-left expand-col" style="width: 20%;">Nature of Job</th>
-                        <th class="py-4 px-6 text-left contact-col" style="width: 15%;">Contact No.</th>
-                        <th class="py-4 px-6 text-left status-col" style="width: 8%;">Status</th>
-                        <th class="py-4 px-6 text-left" style="width: 15%;">Person</th>
-                        <th class="py-4 px-6 text-left">Remarks</th>
-                    </tr>
-                </thead>
-                <tbody id="red-data" class="text-gray-700 text-lg font-medium">
-                    <!-- Data will be loaded here -->
-                </tbody>
-            </table>
-        </div>
-    
-        <!-- Blue Category -->
-        <div id="blue-section" class="bg-white p-6 rounded-lg shadow-md mb-8 border-l-6 border-blue-600" style="width: 100%;">
-            <h2 class="text-2xl font-bold text-blue-600 mb-6">Blue</h2>
-            <table class="min-w-full bg-white border border-gray-300 rounded-lg">
-                <thead>
-                    <tr class="w-full bg-gray-200 text-gray-700 uppercase text-sm leading-normal">
-                        <th class="py-4 px-6 text-left">SL/NO.</th>
-                        <th class="py-4 px-6 text-left" style="width: 10%;">DATE</th>
-                        <th class="py-4 px-6 text-left" style="width: 12%;">Job No</th>
-                        <th class="py-4 px-6 text-left expand-col" style="width: 20%;">Department / Name</th>
-                        <th class="py-4 px-6 text-left expand-col" style="width: 20%;">Nature of Job</th>
-                        <th class="py-4 px-6 text-left contact-col" style="width: 15%;">Contact No.</th>
-                        <th class="py-4 px-6 text-left status-col" style="width: 8%;">Status</th>
-                        <th class="py-4 px-6 text-left" style="width: 15%;">Person</th>
-                        <th class="py-4 px-6 text-left">Remarks</th>
-                    </tr>
-                </thead>
-                <tbody id="blue-data" class="text-gray-700 text-lg font-medium">
-                    <!-- Data will be loaded here -->
-                </tbody>
-            </table>
-        </div>
-    
-        <!-- Green Category -->
-        <div id="green-section" class="bg-white p-6 rounded-lg shadow-md mb-8 border-l-6 border-green-600" style="width: 100%;">
-            <h2 class="text-2xl font-bold text-green-600 mb-6">Green</h2>
-            <table class="min-w-full bg-white border border-gray-300 rounded-lg">
-                <thead>
-                    <tr class="w-full bg-gray-200 text-gray-700 uppercase text-sm leading-normal">
-                        <th class="py-4 px-6 text-left">SL/NO.</th>
-                        <th class="py-4 px-6 text-left" style="width: 10%;">DATE</th>
-                        <th class="py-4 px-6 text-left" style="width: 12%;">Job No</th>
-                        <th class="py-4 px-6 text-left expand-col" style="width: 20%;">Department / Name</th>
-                        <th class="py-4 px-6 text-left expand-col" style="width: 20%;">Nature of Job</th>
-                        <th class="py-4 px-6 text-left contact-col" style="width: 15%;">Contact No.</th>
-                        <th class="py-4 px-6 text-left status-col" style="width: 8%;">Status</th>
-                        <th class="py-4 px-6 text-left" style="width: 15%;">Person</th>
-                        <th class="py-4 px-6 text-left">Remarks</th>
-                    </tr>
-                </thead>
-                <tbody id="green-data" class="text-gray-700 text-lg font-medium">
-                    <!-- Data will be loaded here -->
-                </tbody>
-            </table>
+    <div class="container mx-auto p-4">
+        <h1>Upload Excel File</h1>
+        <form id="uploadForm" action="/upload" method="post" enctype="multipart/form-data">
+            <label for="file">Choose an Excel file:</label>
+            <input type="file" name="file" id="file" accept=".xlsx" required>
+            <button type="submit">Upload</button>
+        </form>
+
+        <p id="filePath"></p>
+
+        <div class="flex justify-center gap-4 mt-4">
+            <a href="/list1" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600">Go to List 1</a>
+            <a href="/list2" class="bg-yellow-500 text-white px-4 py-2 rounded-lg hover:bg-yellow-600">Go to List 2</a>
         </div>
     </div>
-    
-    
 
     <script>
-        let refreshInterval = 5000; // Default to 5 seconds
-        let intervalId;
-
-        function fetchData() {
-            fetch(`/data?interval=${refreshInterval / 1000}`)
-                .then(response => response.json())
-                .then(data => {
-                    updateSection('red-data', data.Red);
-                    updateSection('blue-data', data.Blue);
-                    updateSection('green-data', data.Green);
-                })
-                .catch(error => console.error('Error fetching data:', error));
-        }
-
-        function updateSection(sectionId, data) {
-            const sectionBody = document.getElementById(sectionId);
-            sectionBody.innerHTML = ''; // Clear existing content
-
-            data.forEach(row => {
-                const tr = document.createElement('tr');
-                row.forEach(cell => {
-                    const td = document.createElement('td');
-                    td.textContent = cell || '';
-                    td.classList.add('py-4', 'px-6', 'border-b', 'border-gray-300');
-                    tr.appendChild(td);
-                });
-                sectionBody.appendChild(tr);
+        const uploadForm = document.getElementById('uploadForm');
+        uploadForm.addEventListener('submit', async (event) => {
+            event.preventDefault(); // Prevent the default form submission
+            const formData = new FormData(uploadForm);
+            const response = await fetch('/upload', {
+                method: 'POST',
+                body: formData
             });
-        }
-
-        function setRefreshInterval() {
-            const intervalInput = document.getElementById('refresh-interval');
-            refreshInterval = parseInt(intervalInput.value) * 1000 || 5000;
-            startFetchingData();
-        }
-
-        function startFetchingData() {
-            if (intervalId) {
-                clearInterval(intervalId); // Clear existing interval if any
-            }
-            fetchData();
-            intervalId = setInterval(fetchData, refreshInterval);
-        }
-
-        function toggleFullscreen() {
-            if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen();
-                document.getElementById('fullscreen-icon').textContent = 'EXIT';
-                document.getElementById('interval-container').style.display = 'none';
+            if (response.ok) {
+                const result = await response.json();
+                document.getElementById('filePath').innerText = `File uploaded: ${result.filePath}`;
             } else {
-                if (document.exitFullscreen) {
-                    document.exitFullscreen();
-                    document.getElementById('fullscreen-icon').textContent = 'fullscreen';
-                    document.getElementById('interval-container').style.display = 'block';
-                }
+                document.getElementById('filePath').innerText = 'Failed to upload file.';
             }
-        }
-
-        document.getElementById('set-interval').addEventListener('click', setRefreshInterval);
-
-        // Initial call to start fetching data
-        startFetchingData();
+        });
     </script>
 </body>
+
 </html>

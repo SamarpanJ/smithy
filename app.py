@@ -1,9 +1,8 @@
 from flask import Flask, jsonify, render_template, request
 from openpyxl import load_workbook
-from datetime import datetime
+from datetime import datetime, timedelta
 import time
 import os
-import sys
 
 app = Flask(__name__)
 
@@ -16,21 +15,9 @@ COLOR_CODES = {
 }
 
 
-def get_excel_file_path():
-    """Get the path to the Excel file."""
-    if getattr(sys, 'frozen', False):
-        # If running as a frozen executable
-        bundle_dir = sys._MEIPASS
-    else:
-        # If running as a script
-        bundle_dir = os.path.dirname(os.path.abspath(__file__))
-    
-    file_path = os.path.join(bundle_dir, 'samarpan.xlsx')
-    
-    # Print the file path for debugging
-    print(f"Looking for Excel file at: {file_path}")
-    
-    return file_path
+@app.route('/')
+def index():
+    return render_template('index.html')
 
 def get_cell_color(cell):
     """Extract color information from a cell."""
@@ -78,24 +65,14 @@ def rotate_entries(entries, n=2, offset=0):
 
 
 
-def parse_date(date_str):
-    """Parse date from string."""
-    if isinstance(date_str, str):
-        try:
-            return datetime.strptime(date_str, '%d-%m-%Y').date()
-        except ValueError:
-            raise ValueError(f"Unsupported date format: {date_str}")
-    else:
-        raise ValueError(f"Unsupported date type: {type(date_str)}")
-
-@app.route('/')
-def index():
-    return render_template('index.html')
+@app.route('/list1')
+def list_onedata():
+    return render_template('list2.html')
 
 @app.route('/data')
 def data():
     # Load Excel data and colors
-    color_info = read_excel_with_colors(get_excel_file_path())
+    color_info = read_excel_with_colors('smithy.xlsx')
     
     # Get refresh interval from query parameter
     refresh_interval = int(request.args.get('interval', 10))  # Default to 10 seconds if not provided
@@ -112,11 +89,20 @@ def data():
     }
 
     return jsonify(rotated_color_info)
+def parse_date(date_str):
+    if isinstance(date_str, str):
+        print(date_str)
+        try:
+            return datetime.strptime(date_str, '%d-%m-%Y').date()
+        except ValueError:
+            raise ValueError(f"Unsupported date format: {date_str}")
+    else:
+        raise ValueError(f"Unsupported date type: {type(date_str)}")
 
 @app.route('/list')
 def list_entries():
     # Load Excel data and colors
-    color_info = read_excel_with_colors(get_excel_file_path())
+    color_info = read_excel_with_colors('smithy.xlsx')
 
     # Combine all entries across different categories
     combined_list = []
@@ -176,9 +162,13 @@ def list_entries():
         # If there are 10 or fewer entries, just return them as is
         return jsonify(combined_list)
 
+
+
+
+
 @app.route('/listdata')
 def sending_listdata():
-    return render_template("list.html")
+    return render_template("list1.html")
 
 if __name__ == '__main__':
     app.run(debug=True)
