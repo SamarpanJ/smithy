@@ -1,6 +1,6 @@
 from flask import Flask, jsonify, render_template, request
 from openpyxl import load_workbook
-from openpyxl.styles import Color
+from datetime import datetime, timedelta
 import time
 
 app = Flask(__name__)
@@ -67,7 +67,7 @@ def data():
     color_info = read_excel_with_colors('data/samarpan.xlsx')
     
     # Get refresh interval from query parameter
-    refresh_interval = int(request.args.get('interval', 10))  # Default to 5 seconds if not provided
+    refresh_interval = int(request.args.get('interval', 10))  # Default to 10 seconds if not provided
 
     # Get the current time in seconds and use it to create an offset for rotation
     current_time = int(time.time())
@@ -81,31 +81,61 @@ def data():
     }
 
     return jsonify(rotated_color_info)
-
+def parse_date(date_str):
+    if isinstance(date_str, str):
+        try:
+            return datetime.strptime(date_str, '%d-%m-%Y').date()
+        except ValueError:
+            raise ValueError(f"Unsupported date format: {date_str}")
+    else:
+        raise ValueError(f"Unsupported date type: {type(date_str)}")
+        
 @app.route('/list')
 def list_entries():
     # Load Excel data and colors
     color_info = read_excel_with_colors('data/samarpan.xlsx')
 
-    # Combine all non-black entries while maintaining the original order
+    # Combine all entries across different categories
     combined_list = []
-
-    # Iterate over each category and append entries with color information
     for category in ['Red', 'Blue', 'Green']:
         for entry in color_info[category]:
             entry_with_color = entry + [category]  # Add color as an additional field
             combined_list.append(entry_with_color)
 
-    # Sort the combined list by the "number" column (assumed to be the first column)
-    combined_list.sort(key=lambda x: x[0])  # Adjust the index if needed
+    # Get date filters from query parameters
+    fromdate_str = request.args.get('fromdate')
+    todate_str = request.args.get('todate')
 
-    # Get refresh interval and number of entries per set from query parameters
-    refresh_interval = int(request.args.get('interval', 10))  # Default to 10 seconds
-    entries_per_set = 10  # Fixed number of entries to return
+    fromdate = parse_date(fromdate_str) if fromdate_str else None
+    todate = parse_date(todate_str) if todate_str else None
+
+    # Apply date filters only if they are provided
+    if fromdate or todate:
+        filtered_list = []
+        for entry in combined_list:
+            entry_date = parse_date(entry[1])  # Assuming the date is in the second column
+            if entry_date:
+                if fromdate and todate:
+                    if fromdate <= entry_date <= todate:
+                        filtered_list.append(entry)
+                elif fromdate:
+                    if fromdate <= entry_date:
+                        filtered_list.append(entry)
+                elif todate:
+                    if entry_date <= todate:
+                        filtered_list.append(entry)
+        combined_list = filtered_list
+
+    # Sort the combined list by the date column
+    combined_list.sort(key=lambda x: parse_date(x[1]))
+
+    # Get refresh interval and entries per set from query parameters
+    refresh_interval = int(request.args.get('interval', 5))  # Default to 5 seconds
+    entries_per_set = int(request.args.get('entries', 10))  # Default to 10 entries
 
     # Calculate offset based on the current time and refresh interval
     current_time = int(time.time())
-    offset = (current_time // refresh_interval) % len(combined_list)
+    offset = (current_time // refresh_interval) % max(len(combined_list), 1)
 
     # Rotate the list and select the current set of entries
     rotated_list = combined_list[offset:offset + entries_per_set]
@@ -115,8 +145,6 @@ def list_entries():
         rotated_list += combined_list[:entries_per_set - len(rotated_list)]
 
     return jsonify(rotated_list)
-
-
 @app.route('/listdata')
 def sending_listdata():
     return render_template("list.html")
