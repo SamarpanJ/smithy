@@ -1,7 +1,9 @@
 from flask import Flask, jsonify, render_template, request
 from openpyxl import load_workbook
-from datetime import datetime, timedelta
+from datetime import datetime
 import time
+import os
+import sys
 
 app = Flask(__name__)
 
@@ -12,6 +14,23 @@ COLOR_CODES = {
     'Green': 'FF00B050',
     'Normal': None
 }
+
+
+def get_excel_file_path():
+    """Get the path to the Excel file."""
+    if getattr(sys, 'frozen', False):
+        # If running as a frozen executable
+        bundle_dir = sys._MEIPASS
+    else:
+        # If running as a script
+        bundle_dir = os.path.dirname(os.path.abspath(__file__))
+    
+    file_path = os.path.join(bundle_dir, 'samarpan.xlsx')
+    
+    # Print the file path for debugging
+    print(f"Looking for Excel file at: {file_path}")
+    
+    return file_path
 
 def get_cell_color(cell):
     """Extract color information from a cell."""
@@ -57,6 +76,18 @@ def rotate_entries(entries, n=2, offset=0):
     length = len(entries)
     return [entries[(i + offset) % length] for i in range(n)]
 
+
+
+def parse_date(date_str):
+    """Parse date from string."""
+    if isinstance(date_str, str):
+        try:
+            return datetime.strptime(date_str, '%d-%m-%Y').date()
+        except ValueError:
+            raise ValueError(f"Unsupported date format: {date_str}")
+    else:
+        raise ValueError(f"Unsupported date type: {type(date_str)}")
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -64,7 +95,7 @@ def index():
 @app.route('/data')
 def data():
     # Load Excel data and colors
-    color_info = read_excel_with_colors('data/samarpan.xlsx')
+    color_info = read_excel_with_colors(get_excel_file_path())
     
     # Get refresh interval from query parameter
     refresh_interval = int(request.args.get('interval', 10))  # Default to 10 seconds if not provided
@@ -81,20 +112,11 @@ def data():
     }
 
     return jsonify(rotated_color_info)
-def parse_date(date_str):
-    if isinstance(date_str, str):
-        print(date_str)
-        try:
-            return datetime.strptime(date_str, '%d-%m-%Y').date()
-        except ValueError:
-            raise ValueError(f"Unsupported date format: {date_str}")
-    else:
-        raise ValueError(f"Unsupported date type: {type(date_str)}")
 
 @app.route('/list')
 def list_entries():
     # Load Excel data and colors
-    color_info = read_excel_with_colors('data/samarpan.xlsx')
+    color_info = read_excel_with_colors(get_excel_file_path())
 
     # Combine all entries across different categories
     combined_list = []
@@ -153,10 +175,6 @@ def list_entries():
     else:
         # If there are 10 or fewer entries, just return them as is
         return jsonify(combined_list)
-
-
-
-
 
 @app.route('/listdata')
 def sending_listdata():
