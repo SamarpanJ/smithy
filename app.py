@@ -137,7 +137,7 @@ def list_entries():
     # Determine the length of the combined list
     list_length = len(combined_list)
 
-    if list_length > 2:
+    if list_length > 10:
         # Calculate offset based on the current time and refresh interval
         current_time = int(time.time())
         offset = (current_time // refresh_interval) % max(list_length, 1)
@@ -151,62 +151,11 @@ def list_entries():
 
         return jsonify(rotated_list)
     else:
-        # If there are 2 or fewer entries, just return them as is
+        # If there are 10 or fewer entries, just return them as is
         return jsonify(combined_list)
 
-    # Load Excel data and colors
-    color_info = read_excel_with_colors('data/samarpan.xlsx')
 
-    # Combine all entries across different categories
-    combined_list = []
-    for category in ['Red', 'Blue', 'Green']:
-        for entry in color_info[category]:
-            entry_with_color = entry + [category]  # Add color as an additional field
-            combined_list.append(entry_with_color)
 
-    # Get date filters from query parameters
-    fromdate_str = request.args.get('fromdate')
-    todate_str = request.args.get('todate')
-
-    fromdate = parse_date(fromdate_str) if fromdate_str else None
-    todate = parse_date(todate_str) if todate_str else None
-
-    # Apply date filters only if they are provided
-    if fromdate or todate:
-        filtered_list = []
-        for entry in combined_list:
-            entry_date = parse_date(entry[1])  # Assuming the date is in the second column
-            if entry_date:
-                if fromdate and todate:
-                    if fromdate <= entry_date <= todate:
-                        filtered_list.append(entry)
-                elif fromdate:
-                    if fromdate <= entry_date:
-                        filtered_list.append(entry)
-                elif todate:
-                    if entry_date <= todate:
-                        filtered_list.append(entry)
-        combined_list = filtered_list
-
-    # Sort the combined list by the date column
-    combined_list.sort(key=lambda x: parse_date(x[1]))
-
-    # Get refresh interval and entries per set from query parameters
-    refresh_interval = int(request.args.get('interval', 5))  # Default to 5 seconds
-    entries_per_set = int(request.args.get('entries', 10))  # Default to 10 entries
-
-    # Calculate offset based on the current time and refresh interval
-    current_time = int(time.time())
-    offset = (current_time // refresh_interval) % max(len(combined_list), 1)
-
-    # Rotate the list and select the current set of entries
-    rotated_list = combined_list[offset:offset + entries_per_set]
-
-    # If the slice is smaller than the required set, wrap around the list
-    if len(rotated_list) < entries_per_set:
-        rotated_list += combined_list[:entries_per_set - len(rotated_list)]
-
-    return jsonify(rotated_list)
 
 
 @app.route('/listdata')
