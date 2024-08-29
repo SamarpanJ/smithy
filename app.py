@@ -24,7 +24,7 @@ directory = None  # Global variable to store directory path
 def get_file_path():
     """Get the full path to 'myexcel.xlsx' in the specified directory."""
     if directory:
-        return os.path.join(directory, 'myexcel.xlsx')
+        return os.path.join(directory, 'DAILY JOB 2023.xlsx')
     return None
 
 def get_cell_color(cell):
