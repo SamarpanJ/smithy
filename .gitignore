@@ -28,5 +28,5 @@ __pycache__/
 
 # Ignore Excel temporary files
 ~$*.xlsx
-
+/build
 /dist

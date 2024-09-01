@@ -27,6 +27,7 @@ REVERSED_COLOR_CODES = {
 }
 
 directory = None  # Global variable to store directory path
+cached_data = []  # Global variable to store cached data
 
 def get_file_path():
     if directory:
@@ -48,40 +49,63 @@ def read_excel_rows(filepath, fromrow, torow):
     if not filepath:
         raise ValueError("File path must be provided")
 
-    try:
-        workbook = openpyxl.load_workbook(filepath, read_only=True)
-        sheet = workbook.active
-    except Exception as e:
-        raise RuntimeError(f"Failed to load workbook: {e}")
-
     data = []
-    
-    for row in sheet.iter_rows(min_row=fromrow, max_row=torow, values_only=False):
-        cell = row[3]  # Get the cell in column D (index 3)
-        color = get_cell_color(cell)
-        cell_data = [c.value for c in row]
 
+    try:
+        # Open the workbook in read-only mode
+        workbook = openpyxl.load_workbook(filepath, read_only=True, data_only=True)
+        sheet = workbook.active
         
-        if color and cell_data[3]:
-            color_name = REVERSED_COLOR_CODES.get(color, "Normal")
-            cell_data.append(color_name)
-            
-            if color in COLOR_CODES.values():
-                data.append(cell_data)
-        else:
-            cell_data.append("Normal")
+        # Process rows
+        for row in sheet.iter_rows(min_row=fromrow, max_row=torow, values_only=False):
+            cell = row[3]  # Get the cell in column D (index 3)
+            color = get_cell_color(cell)
+            cell_data = [c.value for c in row]
 
-    if not data:
-        print("Warning: No data found in the specified row range.")
+            if color and cell_data[3]:
+                color_name = REVERSED_COLOR_CODES.get(color, "Normal")
+                cell_data.append(color_name)
+                
+                if color in COLOR_CODES.values():
+                    data.append(cell_data)
+            else:
+                cell_data.append("Normal")
+
+        if not data:
+            print("Warning: No data found in the specified row range.")
+    except Exception as e:
+        raise RuntimeError(f"Failed to read from workbook: {e}")
+    finally:
+        # Ensure resources are cleaned up
+        workbook.close()  # This is generally recommended to ensure resources are freed
 
     return data
 
-def rotate_entries(entries, n=2, offset=0):
-    """Rotate entries and return a subset."""
-    if not entries:
-        return []
-    length = len(entries)
-    return [entries[(i + offset) % length] for i in range(n)]
+
+
+def refresh_data(interval=30):
+    """Background thread to refresh data every `interval` seconds."""
+    global cached_data
+    last_mod_time = None
+    while True:
+        try:
+            file_path = get_file_path()
+            if file_path:
+                current_mod_time = os.path.getmtime(file_path)
+                if last_mod_time is None or current_mod_time != last_mod_time:
+                    print(f"Refreshing data from {file_path}...")
+                    try:
+                        cached_data = read_excel_rows(file_path, fromrow=4, torow=100000)
+                    except RuntimeError as e:
+                        print(f"Error reading file: {e}")
+                    last_mod_time = current_mod_time
+                else:
+                    print("No changes detected in the file.")
+            else:
+                print("No file path available to refresh data.")
+        except Exception as e:
+            print(f"Error refreshing data: {e}")
+        time.sleep(interval)
 
 def parse_date(date_str):
     if date_str is None:
@@ -100,25 +124,15 @@ def index():
 
 @app.route('/list')
 def list_entries():
-    file_path = get_file_path()
-    if not file_path or not os.path.exists(file_path):
-        return jsonify({'error': 'File not found'}), 404
-
-    fromrow = int(request.args.get('fromrow', 4))
-    torow = int(request.args.get('torow', 100000))
-
-    try:
-        data = read_excel_rows(file_path, fromrow, torow)
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-    combined_list = data
+    global cached_data
 
     fromdate_str = request.args.get('fromdate')
     todate_str = request.args.get('todate')
 
     fromdate = parse_date(fromdate_str) if fromdate_str else None
     todate = parse_date(todate_str) if todate_str else None
+
+    combined_list = cached_data
 
     if fromdate or todate:
         filtered_list = []
@@ -138,8 +152,8 @@ def list_entries():
 
     combined_list.sort(key=lambda x: parse_date(x[1]))
 
-    refresh_interval = int(request.args.get('interval', 30))  # Default to 5 seconds
-    entries_per_set = int(request.args.get('entries',12))  # Default to 10 entries
+    refresh_interval = int(request.args.get('interval', 10))  # Default to 30 seconds
+    entries_per_set = int(request.args.get('entries', 12))  # Default to 12 entries
 
     list_length = len(combined_list)
 
@@ -160,10 +174,9 @@ def list_entries():
 def list2data():
     return render_template("list2.html")
 
-
 @app.route('/stop_server', methods=['POST'])
 def stop_server():
-    print("Sutting down the server...")
+    print("Shutting down the server...")
     os._exit(0)  
 
 def is_port_in_use(port):
@@ -178,13 +191,14 @@ def start_flask_server():
         print("Flask server is already running on port 5000. Aborting...")
 
 def select_file():
-    global directory
+    global directory, cached_data
     file_path = filedialog.askopenfilename(filetypes=[("Excel files", "*.xlsx")])
     
     if file_path:
         directory = os.path.dirname(file_path)
         result_label.config(text=f"Selected File Directory: {directory}")
         root.destroy()
+        cached_data = read_excel_rows(file_path, fromrow=4, torow=100000)
         # Open the Flask app in the default web browser
         webbrowser.open("http://localhost:5000")
 
@@ -220,6 +234,10 @@ result_label = tk.Label(
     wraplength=350
 )
 result_label.pack(pady=10)
+
+# Start the background thread to refresh data
+data_refresh_thread = Thread(target=refresh_data, daemon=True)
+data_refresh_thread.start()
 
 # Run the Flask server in a separate thread
 flask_thread = Thread(target=start_flask_server)
