@@ -30,7 +30,9 @@ directory = None  # Global variable to store directory path
 
 def get_file_path():
     if directory:
-        return os.path.join(directory, 'DAILY JOB 2023.xlsx')
+        path = os.path.join(directory, 'DAILY JOB 2023.xlsx')
+        print(f"path: {path}")
+        return path
     return None
 
 def get_cell_color(cell):
@@ -58,8 +60,9 @@ def read_excel_rows(filepath, fromrow, torow):
         cell = row[3]  # Get the cell in column D (index 3)
         color = get_cell_color(cell)
         cell_data = [c.value for c in row]
+
         
-        if color:
+        if color and cell_data[3]:
             color_name = REVERSED_COLOR_CODES.get(color, "Normal")
             cell_data.append(color_name)
             
@@ -97,7 +100,7 @@ def index():
 
 @app.route('/list')
 def list_entries():
-    file_path = "DAILY JOB 2023.xlsx"
+    file_path = get_file_path()
     if not file_path or not os.path.exists(file_path):
         return jsonify({'error': 'File not found'}), 404
 
