@@ -8,6 +8,7 @@ import time
 from threading import Thread
 import socket
 import webbrowser
+import openpyxl
 
 # Flask app setup
 app = Flask(__name__)
@@ -19,53 +20,58 @@ COLOR_CODES = {
     'Normal': None
 }
 
+REVERSED_COLOR_CODES = {
+    'FFFF0000': 'Red',
+    'FF00B0F0': 'Blue',
+    'FF00B050': 'Green',
+}
+
 directory = None  # Global variable to store directory path
 
 def get_file_path():
-    """Get the full path to 'myexcel.xlsx' in the specified directory."""
     if directory:
         return os.path.join(directory, 'DAILY JOB 2023.xlsx')
     return None
 
 def get_cell_color(cell):
-    """Extract color information from a cell."""
+    """Extract color information from a cell's font."""
     if cell.font and cell.font.color and cell.font.color.type == 'rgb':
         return cell.font.color.rgb
     return None
 
-def read_excel_with_colors(file_path):
-    """Read Excel file and categorize cell colors."""
-    if not file_path:
-        return {'Red': [], 'Blue': [], 'Green': [], 'Normal': []}
+def read_excel_rows(filepath, fromrow, torow):
+    """
+    Read and filter rows from an Excel file based on the color of the cell in column D.
+    """
+    if not filepath:
+        raise ValueError("File path must be provided")
+
+    try:
+        workbook = openpyxl.load_workbook(filepath, read_only=True)
+        sheet = workbook.active
+    except Exception as e:
+        raise RuntimeError(f"Failed to load workbook: {e}")
+
+    data = []
     
-    wb = load_workbook(filename=file_path, data_only=True)
-    sheet = wb.active
-
-    categories = {
-        'Red': [],
-        'Blue': [],
-        'Green': [],
-        'Normal': []
-    }
-
-    for row in sheet.iter_rows(min_row=4, values_only=False):  # Start from row 4
-        cell = row[3]  # Column D (0-based index 3)
+    for row in sheet.iter_rows(min_row=fromrow, max_row=torow, values_only=False):
+        cell = row[3]  # Get the cell in column D (index 3)
         color = get_cell_color(cell)
-        cell_data = [cell.value for cell in row]
-
+        cell_data = [c.value for c in row]
+        
         if color:
-            if color == COLOR_CODES['Red']:
-                categories['Red'].append(cell_data)
-            elif color == COLOR_CODES['Blue']:
-                categories['Blue'].append(cell_data)
-            elif color == COLOR_CODES['Green']:
-                categories['Green'].append(cell_data)
-            else:
-                categories['Normal'].append(cell_data)
+            color_name = REVERSED_COLOR_CODES.get(color, "Normal")
+            cell_data.append(color_name)
+            
+            if color in COLOR_CODES.values():
+                data.append(cell_data)
         else:
-            categories['Normal'].append(cell_data)
+            cell_data.append("Normal")
 
-    return categories
+    if not data:
+        print("Warning: No data found in the specified row range.")
+
+    return data
 
 def rotate_entries(entries, n=2, offset=0):
     """Rotate entries and return a subset."""
@@ -75,51 +81,35 @@ def rotate_entries(entries, n=2, offset=0):
     return [entries[(i + offset) % length] for i in range(n)]
 
 def parse_date(date_str):
-    if isinstance(date_str, str):
+    if date_str is None:
+        return datetime.min  # Use a minimal date for comparison
+    formats = ["%Y-%m-%d", "%d-%m-%Y", "%m-%d-%Y"]
+    for fmt in formats:
         try:
-            return datetime.strptime(date_str, '%d-%m-%Y').date()
+            return datetime.strptime(date_str, fmt)
         except ValueError:
-            raise ValueError(f"Unsupported date format: {date_str}")
-    else:
-        raise ValueError(f"Unsupported date type: {type(date_str)}")
+            continue
+    raise ValueError(f"Unsupported date format: {date_str}")
 
 @app.route('/')
 def index():
     return render_template('index.html')
 
-@app.route('/data')
-def data():
-    file_path = get_file_path()
-    if not file_path or not os.path.exists(file_path):
-        return jsonify({'error': 'File not found'}), 404
-    
-    color_info = read_excel_with_colors(file_path)
-    
-    refresh_interval = int(request.args.get('interval', 10))  # Default to 10 seconds if not provided
-    current_time = int(time.time())
-    offset = (current_time // refresh_interval) % max(len(color_info['Red']), len(color_info['Blue']), len(color_info['Green']), 1)
-
-    rotated_color_info = {
-        'Red': rotate_entries(color_info['Red'], offset=offset),
-        'Blue': rotate_entries(color_info['Blue'], offset=offset),
-        'Green': rotate_entries(color_info['Green'], offset=offset),
-    }
-
-    return jsonify(rotated_color_info)
-
 @app.route('/list')
 def list_entries():
-    file_path = get_file_path()
+    file_path = "DAILY JOB 2023.xlsx"
     if not file_path or not os.path.exists(file_path):
         return jsonify({'error': 'File not found'}), 404
-    
-    color_info = read_excel_with_colors(file_path)
 
-    combined_list = []
-    for category in ['Red', 'Blue', 'Green']:
-        for entry in color_info[category]:
-            entry_with_color = entry + [category]
-            combined_list.append(entry_with_color)
+    fromrow = int(request.args.get('fromrow', 4))
+    torow = int(request.args.get('torow', 100000))
+
+    try:
+        data = read_excel_rows(file_path, fromrow, torow)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+    combined_list = data
 
     fromdate_str = request.args.get('fromdate')
     todate_str = request.args.get('todate')
@@ -145,8 +135,8 @@ def list_entries():
 
     combined_list.sort(key=lambda x: parse_date(x[1]))
 
-    refresh_interval = int(request.args.get('interval', 5))  # Default to 5 seconds
-    entries_per_set = int(request.args.get('entries', 13))  # Default to 10 entries
+    refresh_interval = int(request.args.get('interval', 30))  # Default to 5 seconds
+    entries_per_set = int(request.args.get('entries',12))  # Default to 10 entries
 
     list_length = len(combined_list)
 
@@ -167,9 +157,6 @@ def list_entries():
 def list2data():
     return render_template("list2.html")
 
-@app.route('/list1')
-def list1data():
-    return render_template('list1.html')
 
 @app.route('/stop_server', methods=['POST'])
 def stop_server():
