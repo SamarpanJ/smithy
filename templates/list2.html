@@ -68,17 +68,16 @@
         }
 
         @keyframes blink {
-    0% {
-        opacity: 1;
-    }
-    50% {
-        opacity: 0.8; /* Slightly less opaque */
-    }
-    100% {
-        opacity: 1;
-    }
-}
-
+            0% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.8; /* Slightly less opaque */
+            }
+            100% {
+                opacity: 1;
+            }
+        }
 
         body.fullscreen-mode th,
         body.fullscreen-mode td {
@@ -88,7 +87,7 @@
         }
 
         body.fullscreen-mode table {
-            grid-template-columns: repeat(8, var(--fullscreen-column-width));
+            grid-template-columns: repeat(7, var(--fullscreen-column-width));
         }
 
         body.fullscreen-mode .table-container {
@@ -138,7 +137,9 @@
                 <div class="button-row">
                     <button class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500" onclick="applyFilter()">Apply Filter</button>
                     <button class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500" onclick="resetFilters()">Reset Filters</button>
+                    <button class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500" onclick="window.location.href='/'">Go to Home</button>
                 </div>
+                
             </div>
         </div>
 
@@ -153,7 +154,6 @@
                         <th>Nature of Job</th>
                         <th>Contact No</th>
                         <th>Person</th>
-                        <th>Remarks</th>
                     </tr>
                 </thead>
                 <tbody id="data-list">
@@ -185,7 +185,6 @@
                             <td>${row[3] || ''}</td>
                             <td>${row[4] || ''}</td>
                             <td>${row[5] || ''}</td>
-                            <td>${row[6] || ''}</td>
                             <td>${row[7] || ''}</td>
                         `;
 
