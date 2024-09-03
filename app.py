@@ -153,7 +153,7 @@ def list_entries():
     combined_list.sort(key=lambda x: parse_date(x[1]))
 
     refresh_interval = int(request.args.get('interval', 10))  # Default to 30 seconds
-    entries_per_set = int(request.args.get('entries', 12))  # Default to 12 entries
+    entries_per_set = int(request.args.get('entries', 8))  # Default to 12 entries
 
     list_length = len(combined_list)
 

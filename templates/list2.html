@@ -52,20 +52,21 @@
         }
 
         .red-bg {
-            background-color: #f87171;
-            color: white;
-            animation: blink 1s infinite; /* Apply the blink animation */
-        }
+    background-color: #e61e1e; /* Bright red for high contrast */
+    color: #ffffff; /* Pure white text */
+    animation: blink 1s infinite; /* Apply the blink animation */
+}
 
-        .blue-bg {
-            background-color: #60a5fa;
-            color: white;
-        }
+.blue-bg {
+    background-color: #3737cc; /* Bright blue for high contrast */
+    color: #ffffff; /* Pure white text */
+}
 
-        .green-bg {
-            background-color: #34d399;
-            color: white;
-        }
+.green-bg {
+    background-color: #519f51; /* Bright green for high contrast */
+    color: #ffffff; /* Pure white text */
+}
+
 
         @keyframes blink {
             0% {
@@ -147,13 +148,14 @@
             <table>
                 <thead>
                     <tr>
-                        <th>SL/NO</th>
+                        
                         <th>Date</th>
                         <th>Job No</th>
                         <th>Department/Name</th>
                         <th>Nature of Job</th>
                         <th>Contact No</th>
                         <th>Person</th>
+                        <th>Remarks</th>
                     </tr>
                 </thead>
                 <tbody id="data-list">
@@ -179,13 +181,14 @@
                         tr.className = getColorClass(row[row.length - 1]);
 
                         const content = `
-                            <td>${row[0] || ''}</td>
-                            <td>${formatDate(row[1]) || ''}</td>
-                            <td>${row[2] || ''}</td>
-                            <td>${row[3] || ''}</td>
-                            <td>${row[4] || ''}</td>
-                            <td>${row[5] || ''}</td>
-                            <td>${row[7] || ''}</td>
+                            
+                            <td><b>${formatDate(row[1]) || ''}</b></td>
+                            <td><b>${row[2] || ''}</b></td>
+                            <td><b>${row[3] || ''}</b></td>
+                            <td><b>${row[4] || ''}</b></td>
+                            <td><b>${row[5] || ''}</b></td>
+                            <td><b>${row[7] || ''}</b></td>
+                            <td><b>${row[8] || ''}</b></td>
                         `;
 
                         tr.innerHTML = content;
